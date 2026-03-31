@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>외환 선입선출(FIFO) 관리 도구</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.2s ease; cursor: pointer; }
+        .drop-zone.active { border-color: #3b82f6; background-color: #eff6ff; border-style: solid; }
+        .tab-btn.active { border-color: #2563eb; color: #2563eb; background-color: white; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .modal-bg { background-color: rgba(0, 0, 0, 0.5); }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen pb-12">
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">외환 선입선출(FIFO) 관리 시스템</h1>
+                <p class="text-slate-500 font-medium">데이터 누적 저장 및 회사별 관리</p>
+            </div>
+            <div class="flex gap-2 flex-wrap justify-center md:justify-end">
+                <button onclick="window.exportData()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-sm text-sm">📤 내보내기</button>
+                <label for="importFileInput" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-sm text-sm cursor-pointer">📥 가져오기</label>
+                <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="window.importData(event)">
+                <button onclick="window.openUsageModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 px-6 rounded-xl transition shadow-sm">사용법</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- 1. 기초 재고 관리 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800 flex items-center">
+                        <span class="w-7 h-7 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mr-2 text-xs font-bold">01</span>
+                        기초 재고 관리
+                    </h3>
+                </div>
+                
+                <!-- Saved Records Management -->
+                <div class="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <label class="text-[10px] font-black text-blue-400 uppercase mb-2 block tracking-wider">이전 저장 기록 관리</label>
+                    <div class="flex gap-1 mb-2">
+                        <select id="snapshotSelect" class="flex-1 text-sm border-none bg-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                            <option value="">저장된 기록 없음</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="window.loadSnapshot()" class="flex-1 bg-blue-600 text-white text-xs px-2 py-2 rounded-lg font-bold hover:bg-blue-700 transition">
+                            불러오기
+                        </button>
+                        <button onclick="window.handleSnapshotDelete()" class="flex-1 bg-red-100 text-red-500 text-xs px-2 py-2 rounded-lg font-bold hover:bg-red-200 transition">
+                            삭제
+                        </button>
+                    </div>
+                </div>
+
+                <div id="baseInputs" class="space-y-3 max-h-64 overflow-y-auto pr-1 flex-grow">
+                    <!-- Dynamic Rows -->
+                </div>
+
+                <!-- ✅ 수정: "현재 입력값 저장" → "초기화" 버튼으로 교체 -->
+                <div class="mt-4 pt-4 border-t flex gap-2">
+                    <button onclick="window.addBaseRow()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 rounded-lg text-xs font-bold">+ 행 추가</button>
+                    <button onclick="window.clearBaseRows()" class="flex-1 bg-red-50 hover:bg-red-100 text-red-500 py-2.5 rounded-lg text-xs font-bold border border-red-100">초기화</button>
+                </div>
+            </div>
+
+            <!-- 2. 환율 데이터 누적 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+                    <span class="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center mr-2 text-xs font-bold">02</span>
+                    환율 데이터 누적
+                </h3>
+                <div class="space-y-4 flex-grow">
+                    <button onclick="window.open('http://www.smbs.biz/ExRate/StdExRate.jsp', '_blank')" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-bold py-3 px-4 rounded-xl border border-slate-200 transition">
+                        공식 사이트 조회 ↗
+                    </button>
+                    <input type="file" id="exchangeFile" class="hidden" accept=".xlsx,.xls,.htm,.html,.csv">
+                    <label id="exchangeDropZone" for="exchangeFile" class="drop-zone block p-4 rounded-2xl text-center border-2 border-dashed h-32 flex flex-col items-center justify-center space-y-2">
+                        <div id="exchangeFileName" class="text-xs text-slate-400 font-bold">환율 파일 드래그 또는 클릭<br><span class="text-emerald-500">xlsx · xls · html 지원</span> · 자동 누적 저장</div>
+                    </label>
+                    <div id="exRateStatus" class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 text-center leading-relaxed font-bold max-h-48 overflow-y-auto">저장된 환율 없음</div>
+                </div>
+            </div>
+
+            <!-- 3. 은행 거래 업로드 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center">
+                    <span class="w-7 h-7 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mr-2 text-xs font-bold">03</span>
+                    은행 거래 업로드
+                </h3>
+                <input type="file" id="bankFile" class="hidden" accept=".xlsx,.xls,.htm,.html,.csv">
+                <label id="bankDropZone" for="bankFile" class="drop-zone block p-4 rounded-2xl text-center border-2 border-dashed h-full flex flex-col items-center justify-center space-y-3 min-h-[12rem]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div id="bankFileName" class="text-sm text-slate-400 font-bold leading-snug">
+                        거래 내역 파일 드래그<br>(xlsx · xls · html 지원)
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Action Center -->
+        <div class="flex flex-col items-center gap-3 mb-10">
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4">
+                <button id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-16 rounded-2xl shadow-xl shadow-blue-200 transform transition active:scale-95">
+                    분석 및 계산 실행
+                </button>
+                <div id="afterCalcBtns" class="hidden flex gap-4">
+                    <button onclick="window.openCompanyModal('save')" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition active:scale-95 flex items-center">
+                        기말 잔액 스냅샷 저장
+                    </button>
+                    <button onclick="window.openCompanyModal('download')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition active:scale-95">
+                        결과 엑셀 다운로드
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 font-bold tracking-wide">세무사 유진영 (010-6566-2351)&nbsp;&nbsp;|&nbsp;&nbsp;ver 1.5&nbsp;&nbsp;2026.03.29</p>
+        </div>
+
+        <!-- Results View -->
+        <div id="resultContainer" class="hidden space-y-8 animate-in fade-in duration-500">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="flex border-b bg-slate-50/50 p-1">
+                    <button class="tab-btn flex-1 py-4 text-sm font-bold active rounded-2xl transition" data-tab="tab-results">원화 장부 기록</button>
+                    <button class="tab-btn flex-1 py-4 text-sm font-bold text-slate-400 rounded-2xl transition" data-tab="tab-stock">기말 보유분 상세</button>
+                </div>
+                <div id="tab-results" class="tab-content p-6 overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-slate-400 font-bold border-b border-slate-100">
+                            <tr>
+                                <th class="px-4 py-3">날짜</th>
+                                <th class="px-4 py-3">적요</th>
+                                <th class="px-4 py-3 text-right">환율</th>
+                                <th class="px-4 py-3 text-right">입금(KRW)</th>
+                                <th class="px-4 py-3 text-right text-red-400">출금원가(KRW)</th>
+                                <th class="px-4 py-3 text-right font-bold text-blue-600">장부잔액(KRW)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultBody" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+                <div id="tab-stock" class="tab-content p-6 hidden overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-slate-400 font-bold border-b border-slate-100">
+                            <tr>
+                                <th class="px-4 py-3">Lot</th>
+                                <th class="px-4 py-3 text-right">잔여수량(USD)</th>
+                                <th class="px-4 py-3 text-right">취득환율</th>
+                                <th class="px-4 py-3 text-right font-bold text-slate-700">원화가치(KRW)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockBody" class="divide-y divide-slate-50"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    <div id="usageModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4 border-b pb-2">사용자 가이드</h2>
+            <div class="space-y-5 text-sm text-slate-600 leading-relaxed">
+                <section>
+                    <h4 class="font-bold text-blue-600 mb-1">1. 기초 외환 입력</h4>
+                    <p class="font-medium">기초 외환 수량 및 환율을 입력합니다. 저장이 된 경우에는 불러오기를 이용합니다.</p>
+                </section>
+                <section>
+                    <h4 class="font-bold text-purple-600 mb-1">2. 환율 데이터</h4>
+                    <p class="font-medium">환율 엑셀 파일을 업로드 하면 자동으로 저장이 됩니다. 다른 PC에서 사용시에는 새로 업로드 해야 합니다.</p>
+                </section>
+                <section>
+                    <h4 class="font-bold text-emerald-600 mb-1">3. 은행 거래 업로드</h4>
+                    <p class="font-medium">은행 엑셀 파일을 업로드 합니다. 파일명은 상관이 없습니다.</p>
+                </section>
+                <section>
+                    <h4 class="font-bold text-slate-600 mb-1">4. 저장 기록 삭제</h4>
+                    <p class="font-medium">이전 저장 기록 목록에서 항목을 선택 후 삭제 버튼을 누르면 해당 스냅샷이 영구 삭제됩니다.</p>
+                </section>
+
+                <!-- ⚠️ 9번 강조 섹션 -->
+                <section class="bg-red-50 border-2 border-red-300 rounded-2xl p-4">
+                    <h4 class="font-black text-red-600 mb-2 flex items-center gap-1 text-base">
+                        ⚠️ 오류 자주 발생! — 제목열 중복 키워드 주의
+                    </h4>
+                    <p class="font-bold text-red-700 mb-3">거래 내역 엑셀의 제목 행에 입금·출금 관련 단어가 2개 이상 있으면 오류가 발생합니다.</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="bg-white rounded-xl p-3 border border-red-200">
+                            <p class="text-red-500 font-black mb-1">❌ 문제가 되는 예시</p>
+                            <p class="font-bold text-slate-700">"입금액" + "입금의뢰인명" → <span class="text-red-500">입금 키워드 중복!</span></p>
+                            <p class="font-bold text-slate-700">"출금액" + "출금거래처" → <span class="text-red-500">출금 키워드 중복!</span></p>
+                        </div>
+                        <div class="bg-white rounded-xl p-3 border border-emerald-200">
+                            <p class="text-emerald-600 font-black mb-1">✅ 해결 방법</p>
+                            <p class="font-bold text-slate-700">"입금의뢰인명" → "의뢰인명" 으로 변경</p>
+                            <p class="font-bold text-slate-700">"출금거래처" → "거래처" 로 변경</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <button onclick="window.closeModal('usageModal')" class="w-full mt-6 bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-lg">확인</button>
+            <div class="mt-5 pt-4 border-t border-slate-100 text-center space-y-1">
+                <p class="text-xs font-black text-slate-500">만든이 : 세무사 유진영 (010-6566-2351)</p>
+                <p class="text-[11px] font-bold text-red-400 tracking-wide">⚠ 안정화 될때까지는 외부 유출 금지 부탁드립니다</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="companyModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">
+            <h4 id="companyModalTitle" class="text-xl font-bold mb-2">회사명 및 연도 입력</h4>
+            <div class="space-y-3 mb-6 text-left">
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">회사명</label>
+                <input type="text" id="companyInput" placeholder="(주)에이아이" class="w-full border-2 border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 transition font-bold">
+                <label class="text-[10px] font-black text-slate-400 uppercase ml-1">기준 시점</label>
+                <input type="text" id="periodInput" placeholder="2026 기말" class="w-full border-2 border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 transition font-bold">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="window.closeModal('companyModal')" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold hover:bg-slate-200 transition">취소</button>
+                <button id="companyModalConfirmBtn" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold transition hover:bg-blue-700 shadow-lg shadow-blue-100">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="msgModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">
+            <h4 id="msgTitle" class="text-xl font-bold mb-2">알림</h4>
+            <p id="msgText" class="text-slate-500 mb-6 text-sm leading-relaxed font-bold"></p>
+            <button onclick="window.closeModal('msgModal')" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-lg">확인</button>
+        </div>
+    </div>
+
+    <script>
+        let fetchedExchangeRates = [];
+        let bankFileData = null;
+        let lastCalculationResults = null;
+        let companySnapshots = {};
+
+        // ── 데이터 내보내기 (Export) ──
+        window.exportData = () => {
+            const keys = ['fx_exchange_rates', 'fx_company_snapshots'];
+            const exportObj = { _tool: 'USD_FIFO', _exported: new Date().toISOString() };
+            keys.forEach(k => { const v = localStorage.getItem(k); if (v) exportObj[k] = v; });
+            if (Object.keys(exportObj).length === 2) return window.showMsg("알림", "내보낼 데이터가 없습니다.\n먼저 환율 파일을 업로드하거나 스냅샷을 저장해 주세요.");
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = `USD_FIFO_백업_${new Date().toISOString().slice(0,10)}.json`; a.click();
+        };
+
+        // ── 데이터 가져오기 (Import) ──
+        window.importData = (event) => {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const obj = JSON.parse(e.target.result);
+                    if (obj._tool !== 'USD_FIFO') return window.showMsg("오류", "이 파일은 USD 선입선출 도구용 백업 파일이 아닙니다.");
+                    ['fx_exchange_rates', 'fx_company_snapshots'].forEach(k => { if (obj[k]) localStorage.setItem(k, obj[k]); });
+                    window.showMsg("가져오기 완료", "데이터를 성공적으로 불러왔습니다. 확인을 누르면 새로고침됩니다.");
+                    document.getElementById('msgModal').querySelector('button').onclick = () => location.reload();
+                } catch { window.showMsg("오류", "파일을 읽는 중 오류가 발생했습니다."); }
+            };
+            reader.readAsText(file); event.target.value = '';
+        };
+
+        // --- 전역 함수 정의 ---
+        window.openUsageModal = () => document.getElementById('usageModal').classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+        
+        window.addBaseRow = (amt = "", rate = "") => {
+            const container = document.getElementById('baseInputs');
+            const div = document.createElement('div');
+            div.className = "base-row grid grid-cols-2 gap-2 animate-in slide-in-from-top-1 duration-200";
+            
+            let fAmt = (amt !== "" && !isNaN(amt)) ? Number(amt).toFixed(2) : "";
+            let fRate = (rate !== "" && !isNaN(rate)) ? Math.round(Number(rate)) : "";
+
+            div.innerHTML = `
+                <div class="relative">
+                    <input type="number" step="0.01" value="${fAmt}" placeholder="수량" class="base-amt w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold">
+                    <span class="absolute right-3 top-3 text-[10px] text-slate-300 font-black">USD</span>
+                </div>
+                <div class="relative">
+                    <input type="number" step="1" value="${fRate}" placeholder="환율" class="base-rate w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold">
+                    <span class="absolute right-3 top-3 text-[10px] text-slate-300 font-black">KRW</span>
+                </div>
+            `;
+            container.appendChild(div);
+        };
+
+        // ✅ 신규: 기초 재고 입력값 초기화
+        window.clearBaseRows = () => {
+            if (!confirm("입력된 수량·환율을 모두 초기화하시겠습니까?")) return;
+            const container = document.getElementById('baseInputs');
+            container.innerHTML = "";
+            window.addBaseRow();
+        };
+
+        window.clearAllData = () => {
+            if (confirm("저장된 환율 데이터가 초기화됩니다.\n(이전 저장 기록 스냅샷은 유지됩니다)\n계속하시겠습니까?")) {
+                const snapshots = localStorage.getItem('fx_company_snapshots');
+                localStorage.clear();
+                if (snapshots) localStorage.setItem('fx_company_snapshots', snapshots);
+                location.reload();
+            }
+        };
+
+        window.loadSnapshot = () => {
+            const select = document.getElementById('snapshotSelect');
+            const key = select.value;
+            if (!key) return window.showMsg("알림", "불러올 스냅샷을 선택해 주세요.");
+            const data = companySnapshots[key];
+            const container = document.getElementById('baseInputs');
+            container.innerHTML = "";
+            data.forEach(item => window.addBaseRow(item.amount, item.rate));
+            window.showMsg("기록 로드됨", `'${key}' 데이터를 불러왔습니다.`);
+        };
+
+        // ✅ 수정: 삭제 확인 후 목록 즉시 갱신
+        window.handleSnapshotDelete = () => {
+            const select = document.getElementById('snapshotSelect');
+            const key = select.value;
+            if (!key) return window.showMsg("알림", "삭제할 기록을 선택해 주세요.");
+            
+            if (confirm(`'${key}' 기록을 영구적으로 삭제하시겠습니까?`)) {
+                delete companySnapshots[key];
+                localStorage.setItem('fx_company_snapshots', JSON.stringify(companySnapshots));
+                window.updateSnapshotSelect();
+                window.showMsg("삭제 완료", `'${key}' 기록이 삭제되었습니다.`);
+            }
+        };
+
+        window.showMsg = (title, text) => {
+            document.getElementById('msgTitle').innerText = title; 
+            document.getElementById('msgText').innerText = text;
+            document.getElementById('msgModal').classList.remove('hidden');
+        };
+
+        window.updateSnapshotSelect = () => {
+            const select = document.getElementById('snapshotSelect');
+            const keys = Object.keys(companySnapshots).sort();
+            select.innerHTML = keys.length > 0
+                ? '<option value="">선택하세요</option>'
+                : '<option value="">저장된 기록 없음</option>';
+            keys.forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key; opt.innerText = key;
+                select.appendChild(opt);
+            });
+        };
+
+        window.openCompanyModal = (mode) => {
+            document.getElementById('companyModalTitle').innerText = mode === 'save' ? "기말 잔액 스냅샷 저장" : "결과 엑셀 다운로드";
+            document.getElementById('companyModalConfirmBtn').onclick = mode === 'save' ? window.confirmSaveSnapshot : window.confirmDownload;
+            document.getElementById('companyModal').classList.remove('hidden');
+        };
+
+        window.confirmSaveSnapshot = () => {
+            const name = document.getElementById('companyInput').value.trim();
+            const period = document.getElementById('periodInput').value.trim();
+            if (!name || !period) return window.showMsg("알림", "회사명과 시점을 모두 입력해 주세요.");
+            const key = `${name}_${period}`;
+            companySnapshots[key] = lastCalculationResults.warehouse.map(l => ({ amount: l.amount, rate: l.rate }));
+            localStorage.setItem('fx_company_snapshots', JSON.stringify(companySnapshots));
+            window.updateSnapshotSelect(); 
+            window.closeModal('companyModal');
+            window.showMsg("저장 완료", `'${key}' 스냅샷이 저장되었습니다.`);
+        };
+
+        window.confirmDownload = () => {
+            const company = document.getElementById('companyInput').value.trim() || "미지정회사";
+            const period = document.getElementById('periodInput').value.trim() || "";
+            const { results, warehouse, originalBank } = lastCalculationResults;
+            const wb = XLSX.utils.book_new();
+
+            // 헤더 스타일 공통 함수
+            const makeHeaderStyle = (bgColor) => ({
+                font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+                fill: { fgColor: { rgb: bgColor } },
+                alignment: { horizontal: "center", vertical: "center" },
+                border: { bottom: { style: "thin", color: { rgb: "CCCCCC" } } }
+            });
+
+            // 열 너비 설정 헬퍼
+            const setColWidths = (ws, widths) => {
+                ws['!cols'] = widths.map(w => ({ wch: w }));
+            };
+
+            // 헤더 셀에 스타일 적용 헬퍼
+            const styleHeaderRow = (ws, headers, bgColor) => {
+                headers.forEach((_, ci) => {
+                    const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+                    if (ws[cellRef]) ws[cellRef].s = makeHeaderStyle(bgColor);
+                });
+            };
+
+            // ── 시트 1: 원화 계산 결과 (네이비 헤더) ──
+            const s1Data = results.map(r => ({
+                "날짜": r.date,
+                "적요": r.desc,
+                "적용환율": Math.round(r.rate),
+                "입금액(KRW)": r.inKrw,
+                "출금원가(KRW)": r.outKrw,
+                "원화장부잔액(KRW)": r.balance
+            }));
+            const ws1 = XLSX.utils.json_to_sheet(s1Data);
+            setColWidths(ws1, [14, 30, 14, 18, 18, 20]);
+            s1Data.forEach((_, i) => {
+                ['C','D','E','F'].forEach(c => { if(ws1[c+(i+2)]) ws1[c+(i+2)].z = "#,##0"; });
+            });
+            styleHeaderRow(ws1, Object.keys(s1Data[0] || {}), "1E3A5F");
+            ws1['!rows'] = [{ hpt: 22 }];
+            XLSX.utils.book_append_sheet(wb, ws1, "1. 원화계산결과");
+
+            // ── 시트 2: 원본 데이터 ──
+            const ws2 = XLSX.utils.aoa_to_sheet(originalBank);
+            if (originalBank[0]) {
+                setColWidths(ws2, originalBank[0].map(() => 16));
+                styleHeaderRow(ws2, originalBank[0], "4A4A6A");
+                ws2['!rows'] = [{ hpt: 22 }];
+            }
+            XLSX.utils.book_append_sheet(wb, ws2, "2. 원본데이터");
+
+            // ── 시트 3: 잔액 상세 내역 (에메랄드 헤더) ──
+            const sumUsd = warehouse.reduce((a, l) => a + l.amount, 0);
+            const sumKrw = warehouse.reduce((a, l) => a + (l.amount * l.rate), 0);
+            const s3Data = warehouse.map((l, i) => ({
+                "순번": i + 1,
+                "남은수량(USD)": l.amount,
+                "취득당시환율": Math.round(l.rate),
+                "원화가치(KRW)": Math.round(l.amount * l.rate)
+            }));
+            s3Data.push({ "순번": "합계", "남은수량(USD)": sumUsd, "취득당시환율": "", "원화가치(KRW)": Math.round(sumKrw) });
+            const ws3 = XLSX.utils.json_to_sheet(s3Data);
+            setColWidths(ws3, [10, 18, 16, 18]);
+            s3Data.forEach((_, i) => {
+                if(ws3['B'+(i+2)]) ws3['B'+(i+2)].z = "#,##0.00";
+                if(ws3['C'+(i+2)]) ws3['C'+(i+2)].z = "#,##0";
+                if(ws3['D'+(i+2)]) ws3['D'+(i+2)].z = "#,##0";
+            });
+            // 합계 행 굵게
+            const lastRow = s3Data.length + 1;
+            ['A','B','C','D'].forEach(c => {
+                if(ws3[c+lastRow]) ws3[c+lastRow].s = { font: { bold: true }, fill: { fgColor: { rgb: "F0FDF4" } } };
+            });
+            styleHeaderRow(ws3, Object.keys(s3Data[0] || {}), "065F46");
+            ws3['!rows'] = [{ hpt: 22 }];
+            XLSX.utils.book_append_sheet(wb, ws3, "3. 잔액상세내역");
+
+            XLSX.writeFile(wb, `${company}_${period}_외환보고서.xlsx`);
+            window.closeModal('companyModal');
+        };
+
+        // --- 초기 로드 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedRates = localStorage.getItem('fx_exchange_rates');
+            if (savedRates) {
+                try {
+                    fetchedExchangeRates = JSON.parse(savedRates).filter(r => r.date && r.date.startsWith('20'));
+                    updateExchangeRateStatus();
+                } catch(e) {}
+            }
+
+            // 기초 재고: localStorage 저장값은 더 이상 사용하지 않으므로 빈 행 하나로 시작
+            const container = document.getElementById('baseInputs');
+            container.innerHTML = "";
+            window.addBaseRow();
+
+            const savedSnapshots = localStorage.getItem('fx_company_snapshots');
+            if (savedSnapshots) {
+                try { companySnapshots = JSON.parse(savedSnapshots); window.updateSnapshotSelect(); } catch(e) {}
+            }
+        });
+
+        // --- 유틸리티 및 데이터 처리 ---
+        function updateExchangeRateStatus() {
+            const status = document.getElementById('exRateStatus');
+            if (fetchedExchangeRates.length === 0) {
+                status.innerHTML = '<span class="text-slate-400">저장된 환율 없음</span>';
+                return;
+            }
+            const sorted = [...fetchedExchangeRates].sort((a,b) => a.date.localeCompare(b.date));
+            const totalStart = sorted[0].date.replace(/-/g, '.');
+            const totalEnd = sorted[sorted.length-1].date.replace(/-/g, '.');
+
+            let html = `<div class='text-emerald-600 font-bold'>✅ 자동 누적됨 (${fetchedExchangeRates.length}건)</div>`;
+            html += `<div class='text-[10px] text-slate-400 mt-1 font-bold'>${totalStart} ~ ${totalEnd}</div>`;
+            status.innerHTML = html;
+        }
+
+        function getLocalDateString(date) {
+            if (!(date instanceof Date) || isNaN(date.getTime()) || date.getFullYear() < 2000) return null;
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        const setupDragAndDrop = (dropZoneId, fileInputId, displayId, callback, parseMode) => {
+            const dropZone = document.getElementById(dropZoneId);
+            const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(n => dropZone.addEventListener(n, prevent));
+            ['dragenter', 'dragover'].forEach(n => dropZone.addEventListener(n, () => dropZone.classList.add('active')));
+            ['dragleave', 'drop'].forEach(n => dropZone.addEventListener(n, () => dropZone.classList.remove('active')));
+            dropZone.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0], displayId, callback, parseMode));
+            document.getElementById(fileInputId).addEventListener('change', (e) => handleFile(e.target.files[0], displayId, callback, parseMode));
+        };
+
+        // HTML 위장 XLS에서 환율 데이터 파싱
+        function parseHTMLExcelFile(binaryStr, callback) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(binaryStr, 'text/html');
+            const tables = doc.querySelectorAll('table');
+            let rows = [['날짜', '환율']];
+            tables.forEach(table => {
+                table.querySelectorAll('tr').forEach(tr => {
+                    const cells = tr.querySelectorAll('td');
+                    if (cells.length < 3) return;
+                    const dateText = cells[0].textContent.trim();
+                    if (/^\d{4}\.\d{2}\.\d{2}$/.test(dateText)) {
+                        const rateText = cells[2].textContent.trim().replace(/[,\s]/g, '');
+                        const rateVal = parseFloat(rateText);
+                        if (!isNaN(rateVal) && rateVal > 0) {
+                            rows.push([dateText.replace(/\./g, '-'), rateText]);
+                        }
+                    }
+                });
+            });
+            if (rows.length > 1) {
+                callback(rows);
+            } else {
+                window.showMsg("오류", "HTML 형식 파일에서 환율 데이터를 찾을 수 없습니다.\n날짜 형식(YYYY.MM.DD)과 환율 열을 확인해 주세요.");
+            }
+        }
+
+        // HTML 위장 XLS에서 은행 거래 데이터 파싱 (범용 테이블 추출)
+        function parseHTMLBankFile(binaryStr, callback) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(binaryStr, 'text/html');
+            const tables = doc.querySelectorAll('table');
+            if (tables.length === 0) {
+                window.showMsg("오류", "HTML 형식 파일에서 테이블을 찾을 수 없습니다.");
+                return;
+            }
+            // 가장 행이 많은 테이블 선택
+            let bestTable = tables[0];
+            tables.forEach(t => { if (t.querySelectorAll('tr').length > bestTable.querySelectorAll('tr').length) bestTable = t; });
+            
+            let rows = [];
+            bestTable.querySelectorAll('tr').forEach(tr => {
+                const cells = [...tr.querySelectorAll('th, td')];
+                rows.push(cells.map(c => {
+                    let text = c.textContent.trim().replace(/\s+/g, ' ');
+                    // 날짜 형식 변환: YYYY.MM.DD 또는 YYYY/MM/DD → Date 객체로 파싱 가능하게
+                    if (/^\d{4}[\.\/-]\d{2}[\.\/-]\d{2}$/.test(text)) {
+                        text = text.replace(/[\.\/-]/g, '-');
+                    }
+                    // 숫자만 있는 셀은 숫자로 변환 시도 (콤마 제거)
+                    const numCandidate = text.replace(/,/g, '');
+                    if (/^-?\d+(\.\d+)?$/.test(numCandidate) && text !== '') {
+                        return parseFloat(numCandidate);
+                    }
+                    return text;
+                }));
+            });
+            if (rows.length > 1) {
+                callback(rows);
+            } else {
+                window.showMsg("오류", "HTML 형식 파일에서 거래 데이터를 찾을 수 없습니다.");
+            }
+        }
+
+        function handleFile(file, displayId, callback, parseMode) {
+            if (!file) return;
+            document.getElementById(displayId).innerHTML = `<div class="text-blue-600 font-bold text-xs truncate max-w-[150px] mx-auto">${file.name}</div><div class="text-[9px] text-slate-300 mt-1 uppercase font-bold">Loaded</div>`;
+            
+            // 1단계: 파일 앞부분을 텍스트로 읽어 HTML인지 판별
+            const peekReader = new FileReader();
+            peekReader.onload = (e) => {
+                const peek = e.target.result;
+                const isHTML = peek.includes('<table') || peek.includes('<TABLE') || 
+                               peek.includes('<meta') || peek.includes('<META') ||
+                               peek.includes('<!DOCTYPE') || peek.includes('<html');
+                
+                if (isHTML) {
+                    // HTML 위장 파일 → 인코딩 자동 감지 후 HTML 파서 사용
+                    tryDecodeAndParse(file, callback, parseMode);
+                } else {
+                    // 정상 엑셀 파일 → XLSX 파싱
+                    const xlReader = new FileReader();
+                    xlReader.onload = (ev) => {
+                        try {
+                            const workbook = XLSX.read(new Uint8Array(ev.target.result), { type: 'array', cellDates: true });
+                            callback(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 }));
+                        } catch (err) {
+                            window.showMsg("오류", "엑셀 파일을 읽을 수 없습니다.\n파일 형식을 확인해 주세요.");
+                        }
+                    };
+                    xlReader.readAsArrayBuffer(file);
+                }
+            };
+            // peek은 utf-8로 읽어도 태그 감지에 충분 (태그는 ASCII)
+            peekReader.readAsText(file.slice(0, 2000), 'utf-8');
+        }
+
+        function tryDecodeAndParse(file, callback, parseMode) {
+            const encodings = ['euc-kr', 'utf-8'];
+            let tryIdx = 0;
+
+            function attempt() {
+                if (tryIdx >= encodings.length) {
+                    window.showMsg("오류", "파일 인코딩을 인식할 수 없습니다.");
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    if (text.includes('<table') || text.includes('<TABLE') || text.includes('<td') || text.includes('<TD')) {
+                        if (parseMode === 'exchange') {
+                            parseHTMLExcelFile(text, callback);
+                        } else {
+                            parseHTMLBankFile(text, callback);
+                        }
+                    } else {
+                        tryIdx++;
+                        attempt();
+                    }
+                };
+                reader.readAsText(file, encodings[tryIdx]);
+            }
+            attempt();
+        }
+
+        setupDragAndDrop('bankDropZone', 'bankFile', 'bankFileName', d => bankFileData = d, 'bank');
+        setupDragAndDrop('exchangeDropZone', 'exchangeFile', 'exchangeFileName', raw => {
+            let newParsed = [];
+            raw.forEach((row, i) => {
+                if (i === 0 || !row || row.length < 2) return;
+                let d = row[0];
+                let r = parseFloat(String(row[row.length-1] || 0).replace(/,/g, ''));
+                if (d) {
+                    let dateObj = (typeof d === 'number') ? XLSX.SSF.parse_date_code(d) : new Date(d);
+                    let finalDate = (typeof d === 'number') ? new Date(dateObj.y, dateObj.m-1, dateObj.d) : dateObj;
+                    let dStr = getLocalDateString(finalDate);
+                    if (dStr && !isNaN(r) && r > 0) newParsed.push({ date: dStr, rate: r });
+                }
+            });
+
+            if (newParsed.length > 0) {
+                const rateMap = new Map();
+                fetchedExchangeRates.forEach(item => rateMap.set(item.date, item.rate));
+                newParsed.forEach(item => rateMap.set(item.date, item.rate));
+
+                fetchedExchangeRates = Array.from(rateMap.entries())
+                    .map(([date, rate]) => ({ date, rate }))
+                    .sort((a,b) => a.date.localeCompare(b.date));
+                
+                localStorage.setItem('fx_exchange_rates', JSON.stringify(fetchedExchangeRates));
+                updateExchangeRateStatus();
+                window.showMsg("환율 데이터 누적", `총 ${fetchedExchangeRates.length}일의 환율 데이터가 저장되었습니다.`);
+            } else {
+                window.showMsg("오류", "유효한 환율 데이터를 찾을 수 없습니다.");
+            }
+        }, 'exchange');
+
+        document.getElementById('runBtn').addEventListener('click', () => {
+            if (!bankFileData || fetchedExchangeRates.length === 0) return window.showMsg("파일 부족", "환율 정보와 거래 내역 파일을 확인해 주세요.");
+
+            const keywords = { date: ['거래일', '날짜', '일자'], deposit: ['맡기신', '입금'], withdraw: ['찾으신', '출금'], desc: ['적요', '기재', '내용'] };
+            let bankHeaderIdx = 0, colMap = {};
+            for (let i = 0; i < Math.min(50, bankFileData.length); i++) {
+                let row = bankFileData[i], matches = { date: [], deposit: [], withdraw: [], desc: [] };
+                if(!row || !Array.isArray(row)) continue;
+                row.forEach((cell, idx) => {
+                    let s = String(cell).replace(/\s/g, '');
+                    for (let key in keywords) if (keywords[key].some(k => s.includes(k))) matches[key].push(idx);
+                });
+                if (matches.date.length > 0 && (matches.deposit.length > 0 || matches.withdraw.length > 0)) {
+                    bankHeaderIdx = i; for (let k in matches) colMap[k] = matches[k][0]; break;
+                }
+            }
+
+            // ✅ 9번: 중복 키워드 감지 경고
+            const headerRow = bankFileData[bankHeaderIdx] || [];
+            const dupWarnings = [];
+            const dupChecks = [
+                { label: '입금', keywords: ['입금', '맡기신'] },
+                { label: '출금', keywords: ['출금', '찾으신'] }
+            ];
+            dupChecks.forEach(({ label, keywords: kws }) => {
+                const matched = headerRow.filter(cell => {
+                    const s = String(cell || '').replace(/\s/g, '');
+                    return kws.some(k => s.includes(k));
+                });
+                if (matched.length >= 2) {
+                    dupWarnings.push(`• "${label}" 관련 열이 ${matched.length}개 감지됨: [${matched.join(', ')}]\n  → 금액 열 하나만 남기고 나머지 열 이름을 변경해 주세요.`);
+                }
+            });
+            if (dupWarnings.length > 0) {
+                return window.showMsg(
+                    "⚠️ 열 이름 중복 오류",
+                    "제목 행에 입금 또는 출금 관련 단어가 2개 이상 있어 오류가 발생할 수 있습니다.\n\n" +
+                    dupWarnings.join('\n\n') +
+                    "\n\n예) '입금의뢰인명' → '의뢰인명' 으로 변경 후 다시 업로드해 주세요."
+                );
+            }
+
+            let warehouse = [];
+            document.querySelectorAll('.base-row').forEach(row => {
+                let a = parseFloat(row.querySelector('.base-amt').value);
+                let r = parseFloat(row.querySelector('.base-rate').value);
+                if (!isNaN(a) && !isNaN(r) && a > 0) warehouse.push({ amount: a, rate: r });
+            });
+
+            const ratesMap = {};
+            fetchedExchangeRates.forEach(it => ratesMap[it.date] = it.rate);
+            const sortedRates = [...fetchedExchangeRates].sort((a,b) => a.date.localeCompare(b.date));
+            const firstRate = sortedRates[0]?.rate || 0;
+
+            let results = [], totalCogs = 0;
+            let transactions = bankFileData.slice(bankHeaderIdx + 1).map(r => {
+                if(!r[colMap.date]) return null;
+                let dStr = getLocalDateString(new Date(r[colMap.date]));
+                return { date: dStr, in: parseFloat(String(r[colMap.deposit] || 0).replace(/,/g, '')), out: parseFloat(String(r[colMap.withdraw] || 0).replace(/,/g, '')), desc: String(r[colMap.desc] || "") };
+            }).filter(t => t && t.date).sort((a,b) => a.date.localeCompare(b.date));
+
+            const missingRateDates = [];
+            transactions.forEach(t => {
+                let rate = ratesMap[t.date];
+                if (rate === undefined) {
+                    const past = sortedRates.filter(r => r.date <= t.date);
+                    if (past.length > 0) {
+                        const lastRateDate = past[past.length - 1].date;
+                        const gapDays = (new Date(t.date) - new Date(lastRateDate)) / (1000 * 60 * 60 * 24);
+                        if (gapDays > 7) {
+                            missingRateDates.push(`${t.date} (${t.desc})`);
+                            rate = 0;
+                        } else {
+                            rate = past[past.length - 1].rate; // 주말/공휴일 → 직전 영업일 환율 적용
+                        }
+                    } else {
+                        missingRateDates.push(`${t.date} (${t.desc})`);
+                        rate = 0;
+                    }
+                }
+                if (t.in > 0) warehouse.push({ amount: t.in, rate: rate });
+                let cgs = 0;
+                if (t.out > 0) {
+                    let rem = t.out;
+                    while (rem > 0 && warehouse.length > 0) {
+                        let lot = warehouse[0];
+                        if (lot.amount <= rem) { cgs += (lot.amount * lot.rate); rem -= lot.amount; warehouse.shift(); }
+                        else { cgs += (rem * lot.rate); lot.amount -= rem; rem = 0; }
+                    }
+                }
+                totalCogs += cgs;
+                results.push({ date: t.date, desc: t.desc, rate: rate, inKrw: Math.round(t.in * rate), outKrw: Math.round(cgs), balance: Math.round(warehouse.reduce((a, l) => a + (l.amount * l.rate), 0)) });
+            });
+
+            if (missingRateDates.length > 0) {
+                window.showMsg(
+                    "⚠️ 환율 데이터 없음 — 계산 중단",
+                    "다음 거래일의 환율이 등록되어 있지 않습니다.\n환율 파일을 업로드한 후 다시 실행해 주세요.\n\n" + missingRateDates.join('\n')
+                );
+                return;
+            }
+
+            lastCalculationResults = { results, warehouse, totalCogs, originalBank: bankFileData };
+            renderUI(results, warehouse);
+            document.getElementById('afterCalcBtns').classList.remove('hidden');
+        });
+
+        function renderUI(results, warehouse) {
+            const rb = document.getElementById('resultBody');
+            const sb = document.getElementById('stockBody');
+            rb.innerHTML = ''; sb.innerHTML = '';
+            
+            results.forEach(r => { 
+                rb.innerHTML += `<tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-4 text-slate-500 font-bold">${r.date}</td>
+                    <td class="px-4 py-4 font-bold text-slate-700">${r.desc}</td>
+                    <td class="px-4 py-4 text-right font-bold text-slate-400">${Math.round(r.rate).toLocaleString()}</td>
+                    <td class="px-4 py-4 text-right font-bold text-blue-500">${r.inKrw.toLocaleString()}</td>
+                    <td class="px-4 py-4 text-right font-bold text-red-500">${r.outKrw.toLocaleString()}</td>
+                    <td class="px-4 py-4 text-right font-black text-blue-700 bg-blue-50/30">${r.balance.toLocaleString()}</td>
+                </tr>`; 
+            });
+
+            warehouse.forEach((l, i) => { 
+                sb.innerHTML += `<tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-4 py-4 text-slate-400 font-bold">${i+1}</td>
+                    <td class="px-4 py-4 text-right font-black text-slate-700">${l.amount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                    <td class="px-4 py-4 text-right font-bold text-slate-400">${Math.round(l.rate).toLocaleString()}</td>
+                    <td class="px-4 py-4 text-right font-black text-slate-900 bg-slate-100/50">${Math.round(l.amount * l.rate).toLocaleString()}</td>
+                </tr>`; 
+            });
+
+            document.getElementById('resultContainer').classList.remove('hidden');
+            window.scrollTo({ top: document.getElementById('resultContainer').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        // Tab Switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(btn.dataset.tab).classList.remove('hidden');
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'shadow-sm', 'text-blue-600');
+                    b.classList.add('text-slate-400');
+                });
+                btn.classList.add('active', 'bg-white', 'shadow-sm', 'text-blue-600');
+                btn.classList.remove('text-slate-400');
+            });
+        });
+    </script>
+</body>
+</html>
