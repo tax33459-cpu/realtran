@@ -26,8 +26,8 @@
                 <p class="text-slate-500 font-medium">엔화 데이터 누적 저장 및 회사별 관리</p>
             </div>
             <div class="flex gap-2 flex-wrap justify-center md:justify-end">
-                <button onclick="window.exportData()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-sm text-sm">📤 내보내기</button>
-                <label for="importFileInput" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-sm text-sm cursor-pointer">📥 가져오기</label>
+                <button onclick="window.exportData()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-sm text-sm">📤 환율내보내기</button>
+                <label for="importFileInput" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2.5 px-5 rounded-xl transition shadow-sm text-sm cursor-pointer">📥 환율가져오기</label>
                 <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="window.importData(event)">
                 <button onclick="window.openUsageModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 px-6 rounded-xl transition shadow-sm">사용법</button>
             </div>
