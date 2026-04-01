@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>신규 고객 정보 등록 | 유진영 세무회계</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2EC;
+    --card: #FFFFFF;
+    --primary: #1A2744;
+    --accent: #C8A96E;
+    --accent2: #E8DFD0;
+    --text: #1C1C1E;
+    --muted: #7A7A8A;
+    --border: #E0DAD0;
+    --success: #2E7D52;
+    --error: #C0392B;
+    --personal: #2563EB;
+    --corporate: #7C3AED;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+    color: var(--text);
+  }
+
+  .wrapper { max-width: 680px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeDown 0.6s ease;
+  }
+  .firm-badge {
+    display: inline-block;
+    background: var(--primary);
+    color: var(--accent);
+    font-family: 'Noto Serif KR', serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 6px 20px;
+    border-radius: 2px;
+    margin-bottom: 18px;
+  }
+  .header h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.3;
+  }
+  .header p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 10px;
+    font-weight: 300;
+    line-height: 1.7;
+  }
+
+  /* Progress */
+  .progress-wrap {
+    margin-bottom: 36px;
+    animation: fadeDown 0.6s ease 0.1s both;
+  }
+  .progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 12px;
+  }
+  .step-dot {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    transition: all 0.35s ease;
+    position: relative; z-index: 1;
+    flex-shrink: 0;
+  }
+  .step-dot.active { background: var(--primary); color: white; box-shadow: 0 0 0 4px rgba(26,39,68,0.12); }
+  .step-dot.done { background: var(--accent); color: white; }
+  .step-line {
+    flex: 1; height: 2px;
+    background: var(--border);
+    max-width: 80px;
+    transition: background 0.35s ease;
+  }
+  .step-line.done { background: var(--accent); }
+  .step-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+  .step-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    flex: 1;
+    transition: color 0.3s;
+  }
+  .step-label.active { color: var(--primary); font-weight: 600; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 38px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+  .card.active { display: block; }
+
+  .card-header { margin-bottom: 28px; }
+  .card-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 6px;
+  }
+  .step-badge {
+    background: var(--primary);
+    color: var(--accent);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .card-subtitle { color: var(--muted); font-size: 13px; line-height: 1.6; padding-left: 42px; }
+
+  /* Type Toggle */
+  .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 32px; }
+  .type-btn {
+    padding: 22px 16px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    text-align: center;
+    user-select: none;
+  }
+  .type-btn:hover { border-color: var(--primary); transform: translateY(-2px); }
+  .type-btn.sel-personal { border-color: var(--personal); background: #EFF6FF; }
+  .type-btn.sel-corp { border-color: var(--corporate); background: #F5F3FF; }
+  .type-icon { font-size: 30px; margin-bottom: 10px; }
+  .type-name {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--primary); margin-bottom: 5px;
+  }
+  .type-btn.sel-personal .type-name { color: var(--personal); }
+  .type-btn.sel-corp .type-name { color: var(--corporate); }
+  .type-desc { font-size: 12px; color: var(--muted); }
+
+  /* Fields */
+  .field { margin-bottom: 20px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 520px) {
+    .field-row { grid-template-columns: 1fr; }
+    .card { padding: 24px; }
+    .type-toggle { grid-template-columns: 1fr; }
+  }
+
+  label {
+    display: block;
+    font-size: 11px; font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  label .req { color: var(--accent); margin-left: 3px; }
+
+  input[type=text], input[type=tel], input[type=email], input[type=password], input[type=number], select, textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg);
+    transition: all 0.2s ease;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(26,39,68,0.08);
+  }
+  input.err, select.err { border-color: var(--error); background: #FFF5F5; }
+  .err-msg { color: var(--error); font-size: 11px; margin-top: 5px; display: none; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237A7A8A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; cursor: pointer; }
+
+  /* Radio */
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .radio-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-size: 14px;
+    user-select: none;
+  }
+  .radio-item:hover { border-color: var(--primary); background: #F8F6FF; }
+  .radio-item.checked { border-color: var(--primary); background: #EEF1F8; }
+  .radio-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .radio-item.checked .radio-dot { border-color: var(--primary); background: var(--primary); box-shadow: inset 0 0 0 3px white; }
+
+  /* Divider */
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 28px 0 22px;
+  }
+  .divider span {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted); text-transform: uppercase; white-space: nowrap;
+  }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Conditional */
+  .cond-section {
+    border-radius: 12px;
+    padding: 22px;
+    margin-top: 8px;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+  .cond-section.show { display: block; }
+  .cond-personal { background: #EFF6FF; border: 1.5px solid #DBEAFE; }
+  .cond-corp { background: #F5F3FF; border: 1.5px solid #EDE9FE; }
+  .cond-emp { background: #F0FDF4; border: 1.5px solid #BBF7D0; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 12px; justify-content: flex-end; margin-top: 36px; }
+  .btn {
+    padding: 14px 32px;
+    border-radius: 10px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    letter-spacing: -0.3px;
+  }
+  .btn-back { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-back:hover { background: var(--bg); }
+  .btn-next { background: var(--primary); color: white; }
+  .btn-next:hover { background: #0F1830; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,39,68,0.2); }
+  .btn-submit { background: var(--accent); color: var(--primary); font-weight: 700; font-size: 16px; padding: 15px 36px; }
+  .btn-submit:hover { background: #B8953A; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(200,169,110,0.3); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  /* Summary */
+  .summary-box { background: var(--bg); border-radius: 12px; padding: 24px; }
+  .summary-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 11px 0; border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-key { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .summary-val { font-size: 14px; font-weight: 500; color: var(--text); text-align: right; }
+
+  /* Notice */
+  .notice {
+    background: #FFFBEB; border: 1px solid #FDE68A;
+    border-radius: 10px; padding: 16px;
+    font-size: 13px; color: #78580A; line-height: 1.7;
+    margin-top: 20px;
+  }
+
+  /* Loading */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(245,242,236,0.88);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 18px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 52px; height: 52px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+  }
+  .loading-text { color: var(--primary); font-size: 16px; font-weight: 500; }
+  .loading-sub { color: var(--muted); font-size: 13px; }
+
+  /* Success */
+  #success-screen {
+    display: none; text-align: center;
+    padding: 70px 40px;
+    background: var(--card); border-radius: 18px;
+    box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+    animation: fadeUp 0.5s ease;
+    max-width: 680px; margin: 40px auto;
+  }
+  .success-ring {
+    width: 88px; height: 88px;
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; margin: 0 auto 28px;
+  }
+  #success-screen h2 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 26px; color: var(--primary); margin-bottom: 14px;
+  }
+  #success-screen p { color: var(--muted); font-size: 15px; line-height: 1.7; }
+  .firm-card {
+    margin-top: 36px; padding: 22px;
+    background: var(--bg); border-radius: 12px;
+    font-size: 14px; color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .firm-card strong { color: var(--primary); font-size: 16px; display: block; margin-bottom: 6px; }
+
+  /* Animations */
+  @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">거래처 DB에 등록 중...</div>
+  <div class="loading-sub">잠시만 기다려 주세요</div>
+</div>
+
+<div class="wrapper" id="main-form">
+
+  <div class="header">
+    <div class="firm-badge">유진영 세무회계</div>
+    <h1>신규 고객 정보 등록</h1>
+    <p>아래 정보를 입력해 주시면 원활한 서비스를 제공해 드리겠습니다.<br>작성하신 내용은 세무 업무 처리 목적으로만 사용됩니다.</p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-steps">
+      <div class="step-dot active" id="dot-1">1</div>
+      <div class="step-line" id="line-1"></div>
+      <div class="step-dot" id="dot-2">2</div>
+      <div class="step-line" id="line-2"></div>
+      <div class="step-dot" id="dot-3">3</div>
+      <div class="step-line" id="line-3"></div>
+      <div class="step-dot" id="dot-4">4</div>
+    </div>
+    <div class="step-labels">
+      <span class="step-label active" id="lbl-1">기본 정보</span>
+      <span class="step-label" id="lbl-2">업무 특성</span>
+      <span class="step-label" id="lbl-3">직원 & 홈택스</span>
+      <span class="step-label" id="lbl-4">확인 & 제출</span>
+    </div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card active" id="step-1">
+    <div class="card-header">
+      <div class="card-title"><div class="step-badge">1</div>기본 정보</div>
+      <div class="card-subtitle">사업자 유형을 먼저 선택하고 기본 정보를 입력해 주세요.</div>
+    </div>
+
+    <div class="type-toggle">
+      <div class="type-btn" id="btn-p" onclick="selectType('personal')">
+        <div class="type-icon">👤</div>
+        <div class="type-name">개인사업자</div>
+        <div class="type-desc">프리랜서, 소상공인 등</div>
+      </div>
+      <div class="type-btn" id="btn-c" onclick="selectType('corp')">
+        <div class="type-icon">🏢</div>
+        <div class="type-name">법인사업자</div>
+        <div class="type-desc">주식회사, 유한회사 등</div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>상호명 <span class="req">*</span></label>
+        <input type="text" id="bizName" placeholder="예) 홍길동 카페">
+        <div class="err-msg" id="e-bizName">상호명을 입력해 주세요</div>
+      </div>
+      <div class="field">
+        <label>대표자 성함 <span class="req">*</span></label>
+        <input type="text" id="repName" placeholder="예) 홍길동">
+        <div class="err-msg" id="e-repName">대표자 성함을 입력해 주세요</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>사업자등록번호 <span class="req">*</span></label>
+      <input type="text" id="bizNum" placeholder="000-00-00000" maxlength="12" oninput="fmtBiz(this)">
+      <div class="err-msg" id="e-bizNum">사업자등록번호를 입력해 주세요</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>연락처 <span class="req">*</span></label>
+        <input type="tel" id="phone" placeholder="010-0000-0000" oninput="fmtPhone(this)">
+        <div class="err-msg" id="e-phone">연락처를 입력해 주세요</div>
+      </div>
+      <div class="field">
+        <label>이메일</label>
+        <input type="email" id="email" placeholder="example@email.com">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>사업장 주소</label>
+      <input type="text" id="address" placeholder="예) 서울시 강남구 테헤란로 123">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-next" onclick="nextStep(1)">다음 단계 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card" id="step-2">
+    <div class="card-header">
+      <div class="card-title"><div class="step-badge">2</div>업무 특성</div>
+      <div class="card-subtitle">세금 및 업무 처리를 위해 필요한 정보입니다.</div>
+    </div>
+
+    <div class="field">
+      <label>계약 유형 <span class="req">*</span></label>
+      <div class="radio-group" id="rg-contract">
+        <div class="radio-item" onclick="selRadio('contract','기장',this)"><div class="radio-dot"></div>기장</div>
+        <div class="radio-item" onclick="selRadio('contract','신고대리',this)"><div class="radio-dot"></div>신고대리</div>
+        <div class="radio-item" onclick="selRadio('contract','컨설팅',this)"><div class="radio-dot"></div>컨설팅</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>부가세 과세 유형 <span class="req">*</span></label>
+      <div class="radio-group" id="rg-tax">
+        <div class="radio-item" onclick="selRadio('tax','일반과세',this)"><div class="radio-dot"></div>일반과세</div>
+        <div class="radio-item" onclick="selRadio('tax','간이과세',this)"><div class="radio-dot"></div>간이과세</div>
+        <div class="radio-item" onclick="selRadio('tax','면세',this)"><div class="radio-dot"></div>면세</div>
+      </div>
+    </div>
+
+    <!-- 개인 전용 -->
+    <div class="cond-section cond-personal" id="sec-personal">
+      <div class="divider"><span>개인사업자 추가 정보</span></div>
+      <div class="field">
+        <label>공동사업 여부</label>
+        <div class="radio-group" id="rg-joint">
+          <div class="radio-item" onclick="selRadio('joint','없음',this)"><div class="radio-dot"></div>없음</div>
+          <div class="radio-item" onclick="selRadio('joint','있음',this)"><div class="radio-dot"></div>있음</div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label>기타 소득 여부 (근로소득, 연금 등)</label>
+        <div class="radio-group" id="rg-income">
+          <div class="radio-item" onclick="selRadio('income','없음',this)"><div class="radio-dot"></div>없음</div>
+          <div class="radio-item" onclick="selRadio('income','있음',this)"><div class="radio-dot"></div>있음</div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label>사업장 소유 형태</label>
+        <div class="radio-group" id="rg-place">
+          <div class="radio-item" onclick="selRadio('place','자가',this)"><div class="radio-dot"></div>자가</div>
+          <div class="radio-item" onclick="selRadio('place','임차',this)"><div class="radio-dot"></div>임차</div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label>사업용 차량</label>
+        <div class="radio-group" id="rg-car">
+          <div class="radio-item" onclick="selRadio('car','없음',this)"><div class="radio-dot"></div>없음</div>
+          <div class="radio-item" onclick="selRadio('car','구매',this)"><div class="radio-dot"></div>구매</div>
+          <div class="radio-item" onclick="selRadio('car','리스',this)"><div class="radio-dot"></div>리스</div>
+          <div class="radio-item" onclick="selRadio('car','렌트',this)"><div class="radio-dot"></div>렌트</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 법인 전용 -->
+    <div class="cond-section cond-corp" id="sec-corp">
+      <div class="divider"><span>법인사업자 추가 정보</span></div>
+      <div class="field-row">
+        <div class="field">
+          <label>결산월</label>
+          <select id="settleMonth">
+            <option value="">선택해 주세요</option>
+            <option value="3월">3월</option>
+            <option value="6월">6월</option>
+            <option value="9월">9월</option>
+            <option value="12월">12월 (일반)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>자본금</label>
+          <input type="text" id="capital" placeholder="예) 10,000,000 원" oninput="fmtNum(this)">
+        </div>
+      </div>
+      <div class="field" style="margin-top:4px">
+        <label>특수관계인 거래 여부</label>
+        <div class="radio-group" id="rg-special">
+          <div class="radio-item" onclick="selRadio('special','없음',this)"><div class="radio-dot"></div>없음</div>
+          <div class="radio-item" onclick="selRadio('special','있음',this)"><div class="radio-dot"></div>있음</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep(2)">← 이전</button>
+      <button class="btn btn-next" onclick="nextStep(2)">다음 단계 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card" id="step-3">
+    <div class="card-header">
+      <div class="card-title"><div class="step-badge">3</div>직원 & 홈택스</div>
+      <div class="card-subtitle">급여·원천세 업무 및 수임동의 처리에 필요한 정보입니다.</div>
+    </div>
+
+    <div class="field">
+      <label>직원 유무 <span class="req">*</span></label>
+      <div class="radio-group" id="rg-emp">
+        <div class="radio-item" onclick="selRadio('emp','없음',this);toggleEmp(false)"><div class="radio-dot"></div>없음</div>
+        <div class="radio-item" onclick="selRadio('emp','있음',this);toggleEmp(true)"><div class="radio-dot"></div>있음</div>
+      </div>
+    </div>
+
+    <div class="cond-section cond-emp" id="sec-emp">
+      <div class="field-row">
+        <div class="field">
+          <label>정규직 인원수</label>
+          <input type="number" id="empCount" placeholder="0명" min="0">
+        </div>
+        <div class="field">
+          <label>4대보험 가입 여부</label>
+          <div class="radio-group" id="rg-ins">
+            <div class="radio-item" onclick="selRadio('ins','가입',this)"><div class="radio-dot"></div>가입</div>
+            <div class="radio-item" onclick="selRadio('ins','미가입',this)"><div class="radio-dot"></div>미가입</div>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:4px">
+        <label>4대보험 관리번호 (기존 가입 시)</label>
+        <input type="text" id="insNo" placeholder="기존 관리번호 입력">
+      </div>
+    </div>
+
+    <div class="divider"><span>홈택스 정보</span></div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>홈택스 아이디</label>
+        <input type="text" id="htxId" placeholder="홈택스 아이디" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>홈택스 비밀번호</label>
+        <input type="password" id="htxPw" placeholder="비밀번호" autocomplete="off">
+        <div class="hint">※ 수임동의 완료 후 변경을 권장합니다</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>이전 세무대리인 여부</label>
+      <div class="radio-group" id="rg-agent">
+        <div class="radio-item" onclick="selRadio('agent','없음 (처음)',this)"><div class="radio-dot"></div>없음 (처음)</div>
+        <div class="radio-item" onclick="selRadio('agent','있음',this)"><div class="radio-dot"></div>있음 → 전기 자료 수령 필요</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>사업용 신용카드 홈택스 등록 여부</label>
+      <div class="radio-group" id="rg-card">
+        <div class="radio-item" onclick="selRadio('card','등록됨',this)"><div class="radio-dot"></div>등록됨</div>
+        <div class="radio-item" onclick="selRadio('card','미등록',this)"><div class="radio-dot"></div>미등록</div>
+        <div class="radio-item" onclick="selRadio('card','해당없음',this)"><div class="radio-dot"></div>해당없음</div>
+      </div>
+      <div class="hint">※ 미등록 시 담당자가 등록을 안내해 드립니다</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep(3)">← 이전</button>
+      <button class="btn btn-next" onclick="nextStep(3)">다음 단계 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="card" id="step-4">
+    <div class="card-header">
+      <div class="card-title"><div class="step-badge">4</div>입력 내용 확인</div>
+      <div class="card-subtitle">아래 내용을 확인하신 후 등록하기 버튼을 눌러 주세요.</div>
+    </div>
+
+    <div class="summary-box" id="summary-box"></div>
+
+    <div class="notice">
+      📋 입력하신 정보는 <strong>세무 업무 처리 목적으로만 사용</strong>되며, 제3자에게 제공되지 않습니다.<br>
+      홈택스 비밀번호는 수임동의 완료 후 즉시 변경하시길 권장드립니다.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="prevStep(4)">← 이전</button>
+      <button class="btn btn-submit" id="submit-btn" onclick="submitForm()">✓ 등록하기</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Success -->
+<div id="success-screen">
+  <div class="success-ring">✅</div>
+  <h2>등록이 완료되었습니다!</h2>
+  <p>정보가 성공적으로 저장되었습니다.<br>담당자가 곧 연락드리겠습니다. 감사합니다! 😊</p>
+  <div class="firm-card">
+    <strong>유진영 세무회계</strong>
+    문의사항이 있으시면 언제든지 연락주세요.
+  </div>
+</div>
+
+<script>
+let bizType = '';
+const F = {};  // form data store
+
+function selectType(t) {
+  bizType = t;
+  document.getElementById('btn-p').className = 'type-btn' + (t==='personal'?' sel-personal':'');
+  document.getElementById('btn-c').className = 'type-btn' + (t==='corp'?' sel-corp':'');
+  document.getElementById('sec-personal').className = 'cond-section cond-personal' + (t==='personal'?' show':'');
+  document.getElementById('sec-corp').className = 'cond-section cond-corp' + (t==='corp'?' show':'');
+}
+
+function selRadio(key, val, el) {
+  F[key] = val;
+  el.closest('.radio-group').querySelectorAll('.radio-item').forEach(i => i.classList.remove('checked'));
+  el.classList.add('checked');
+}
+
+function toggleEmp(show) {
+  document.getElementById('sec-emp').className = 'cond-section cond-emp' + (show?' show':'');
+}
+
+function fmtBiz(el) {
+  let v = el.value.replace(/\D/g,'');
+  if(v.length>3) v = v.substr(0,3)+'-'+v.substr(3);
+  if(v.length>6) v = v.substr(0,6)+'-'+v.substr(6);
+  el.value = v.substr(0,12);
+}
+function fmtPhone(el) {
+  let v = el.value.replace(/\D/g,'');
+  if(v.length>3 && v.length<=7) v = v.substr(0,3)+'-'+v.substr(3);
+  else if(v.length>7) v = v.substr(0,3)+'-'+v.substr(3,4)+'-'+v.substr(7,4);
+  el.value = v;
+}
+function fmtNum(el) {
+  let v = el.value.replace(/[^\d]/g,'');
+  el.value = v.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+
+function setErr(id, show) {
+  const el = document.getElementById(id);
+  const em = document.getElementById('e-'+id);
+  if(show) { el.classList.add('err'); if(em) { em.style.display='block'; } }
+  else { el.classList.remove('err'); if(em) { em.style.display='none'; } }
+}
+
+function validateStep1() {
+  let ok = true;
+  if(!document.getElementById('bizName').value.trim()) { setErr('bizName',true); ok=false; } else setErr('bizName',false);
+  if(!document.getElementById('repName').value.trim()) { setErr('repName',true); ok=false; } else setErr('repName',false);
+  if(!document.getElementById('bizNum').value.trim()) { setErr('bizNum',true); ok=false; } else setErr('bizNum',false);
+  if(!document.getElementById('phone').value.trim()) { setErr('phone',true); ok=false; } else setErr('phone',false);
+  if(!bizType) { alert('개인사업자 / 법인사업자를 선택해 주세요.'); ok=false; }
+  return ok;
+}
+
+function nextStep(from) {
+  if(from===1 && !validateStep1()) return;
+  document.getElementById('step-'+from).classList.remove('active');
+  const next = from+1;
+  document.getElementById('step-'+next).classList.add('active');
+  updateProgress(next);
+  if(next===4) buildSummary();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function prevStep(from) {
+  document.getElementById('step-'+from).classList.remove('active');
+  document.getElementById('step-'+(from-1)).classList.add('active');
+  updateProgress(from-1);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function updateProgress(step) {
+  const labels = ['기본 정보','업무 특성','직원 & 홈택스','확인 & 제출'];
+  for(let i=1;i<=4;i++){
+    const dot = document.getElementById('dot-'+i);
+    const lbl = document.getElementById('lbl-'+i);
+    dot.classList.remove('active','done');
+    lbl.classList.remove('active');
+    if(i<step){ dot.classList.add('done'); dot.textContent='✓'; }
+    else if(i===step){ dot.classList.add('active'); dot.textContent=i; lbl.classList.add('active'); }
+    else dot.textContent=i;
+  }
+  for(let i=1;i<=3;i++){
+    document.getElementById('line-'+i).className='step-line'+(i<step?' done':'');
+  }
+}
+
+function buildSummary() {
+  const rows = [
+    ['사업자 구분', bizType==='personal'?'개인사업자':'법인사업자'],
+    ['상호명', document.getElementById('bizName').value],
+    ['대표자명', document.getElementById('repName').value],
+    ['사업자등록번호', document.getElementById('bizNum').value],
+    ['연락처', document.getElementById('phone').value],
+    ['이메일', document.getElementById('email').value||'-'],
+    ['사업장 주소', document.getElementById('address').value||'-'],
+    ['계약 유형', F.contract||'-'],
+    ['과세 유형', F.tax||'-'],
+    ['직원 유무', F.emp||'-'],
+  ];
+  if(F.emp==='있음') rows.push(['직원수', (document.getElementById('empCount').value||'0')+'명']);
+  if(bizType==='corp' && document.getElementById('settleMonth').value) rows.push(['결산월', document.getElementById('settleMonth').value]);
+  if(F.agent) rows.push(['이전 세무대리인', F.agent]);
+
+  document.getElementById('summary-box').innerHTML = rows.map(([k,v])=>`
+    <div class="summary-row">
+      <span class="summary-key">${k}</span>
+      <span class="summary-val">${v}</span>
+    </div>`).join('');
+}
+
+async function submitForm() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  document.getElementById('loading').classList.add('show');
+
+  const empCount = parseInt(document.getElementById('empCount').value)||0;
+  const settleMonth = document.getElementById('settleMonth').value || '12월';
+  const today = new Date().toISOString().split('T')[0];
+
+  // 페이지 본문에 들어갈 상세 정보
+  const pageContent = `## 📌 기본 정보
+| 항목 | 내용 |
+|------|------|
+| 사업장 주소 | ${document.getElementById('address').value||'미입력'} |
+| 이메일 | ${document.getElementById('email').value||'미입력'} |
+
+## 🔐 홈택스 정보
+| 항목 | 내용 |
+|------|------|
+| 홈택스 ID | ${document.getElementById('htxId').value||'미입력'} |
+| 홈택스 PW | ${document.getElementById('htxPw').value||'미입력'} |
+| 사업용 카드 등록 | ${F.card||'미입력'} |
+| 이전 세무대리인 | ${F.agent||'미입력'} |
+
+## 👥 직원 정보
+| 항목 | 내용 |
+|------|------|
+| 직원 유무 | ${F.emp||'미입력'} |
+| 정규직 인원 | ${empCount}명 |
+| 4대보험 | ${F.ins||'해당없음'} |
+| 4대보험 관리번호 | ${document.getElementById('insNo').value||'없음'} |
+
+${bizType==='personal'?`## 📋 개인사업자 추가 정보
+| 항목 | 내용 |
+|------|------|
+| 공동사업 | ${F.joint||'미입력'} |
+| 기타소득 | ${F.income||'미입력'} |
+| 사업장 형태 | ${F.place||'미입력'} |
+| 사업용 차량 | ${F.car||'미입력'} |`:
+`## 📋 법인 추가 정보
+| 항목 | 내용 |
+|------|------|
+| 자본금 | ${document.getElementById('capital').value||'미입력'} |
+| 특수관계인 거래 | ${F.special||'미입력'} |`}
+
+## 📝 메모
+
+(추가 메모 공간)`;
+
+  const prompt = `아래 신규 거래처 정보를 Notion 거래처 DB (data source ID: 5552e25e-ab87-4c24-9332-1e5a04628480)에 새 페이지로 등록해줘.
+
+속성값:
+- 상호명: ${document.getElementById('bizName').value}
+- 사업자등록번호: ${document.getElementById('bizNum').value}
+- 대표자명: ${document.getElementById('repName').value}
+- 연락처: ${document.getElementById('phone').value}
+- 이메일: ${document.getElementById('email').value||''}
+- 구분: ${bizType==='personal'?'개인사업자':'법인사업자'}
+- 계약유형: ${F.contract||'기장'}
+- 과세유형: ${F.tax||'일반과세'}
+- 직원유무: ${F.emp==='있음'?'__YES__':'__NO__'}
+- 직원수: ${empCount}
+- 결산월: ${settleMonth}
+- 기장시작일 (date:기장시작일:start): ${today}
+- 담당자: 유진영
+- 유지여부: 활성
+
+페이지 본문 내용 (content):
+${pageContent}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        mcp_servers: [{ type: 'url', url: 'https://mcp.notion.com/mcp', name: 'notion-mcp' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if(res.ok) {
+      document.getElementById('loading').classList.remove('show');
+      document.getElementById('main-form').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    } else {
+      throw new Error('API error: '+res.status);
+    }
+  } catch(e) {
+    document.getElementById('loading').classList.remove('show');
+    btn.disabled = false;
+    alert('등록 중 오류가 발생했습니다. 다시 시도해 주세요.\n\n'+e.message);
+  }
+}
+</script>
+</body>
+</html>
